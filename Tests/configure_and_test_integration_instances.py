@@ -1311,15 +1311,14 @@ def test_integrations_post_update(build: Build, new_module_instances: list, old_
     """
     old_module_instances.extend(new_module_instances)
     successful_tests_post, failed_tests_post = instance_testing(build, old_module_instances, pre_update=False)
-    return failed_tests_post, successful_tests_post
+    return successful_tests_post, failed_tests_post
 
 
-def update_content_on_servers(build: Build, installed_content_packs_successfully: bool) -> bool:
+def update_content_on_servers(build: Build) -> bool:
     """
     Updates content on the build's server according to the server version
     Args:
         build: Build object
-        installed_content_packs_successfully: whether the content packs were installed successfully pre-update
 
     Returns:
         A boolean that indicates whether the content installation was successful.
@@ -1327,11 +1326,12 @@ def update_content_on_servers(build: Build, installed_content_packs_successfully
         If the server version is higher or equal to 6.0 - will return True if the packs installation was successful
         both before that update and after the update.
     """
+    installed_content_packs_successfully = True
     if LooseVersion(build.server_numeric_version) < LooseVersion('6.0.0'):
         update_content_till_v6(build)
     elif not build.is_nightly:
         set_marketplace_url(build.servers, build.branch_name, build.ci_build_number)
-        installed_content_packs_successfully = install_packs(build) and installed_content_packs_successfully
+        installed_content_packs_successfully = install_packs(build)
     return installed_content_packs_successfully
 
 
@@ -1396,9 +1396,9 @@ def main():
                                                                                   new_integrations,
                                                                                   modified_integrations)
     old_module_instances, new_module_instances, failed_tests_pre, successful_tests_pre = pre_update_configuration_results
-    installed_content_packs_successfully = update_content_on_servers(build, installed_content_packs_successfully)
+    installed_content_packs_successfully = update_content_on_servers(build) and installed_content_packs_successfully
 
-    failed_tests_post, successful_tests_post = test_integrations_post_update(build,
+    successful_tests_post, failed_tests_post = test_integrations_post_update(build,
                                                                              new_module_instances,
                                                                              old_module_instances)
     disable_instances(build)
